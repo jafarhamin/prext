@@ -1,0 +1,160 @@
+routine bar(n)
+     req 0 < n & [20*n]tb
+     ens 1=1
+     do  			/ ### OK, It only needs 17 cycles to execute but since 17 <= 20n, it is verified successfully ### /
+	 i := 0			
+
+routine foo(n)
+     req 0 < n & [19*n+56]tb
+     ens 1=1
+     do  			/ ### OK ### /
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+9]tb 
+	    do (	
+		i := i + 1	
+	    );
+	x := bar(1)
+
+routine square1(n)
+     req 0 < n & [28*n+34]tb
+     ens result = n*n
+     do  			/ ### OK ### /
+	 s := 0;
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & s=n*i & [28*(n-i)+9]tb 
+	    do (	
+		s := s + n;	
+		i := i + 1	
+	    );
+	return s
+
+routine square2(n)
+     req 0 < n & [28*n+33]tb
+     ens result = n*n
+     do  			/ ### FAILS, the contract underestimates the time bound  ### /
+	 s := 0;
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & s=n*i & [28*(n-i)+9]tb
+	    do (	
+		s := s + n;	
+		i := i + 1	
+	    );
+	return s
+
+routine square3(n)
+     req 0 < n & [30*n+32]tb
+     ens result = n*n
+     do  			/ ### OK, Because 30n+32 <= 28n+34 ### /
+	 s := 0;
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & s=n*i & [28*(n-i)+9]tb
+	    do (	
+		s := s + n;	
+		i := i + 1	
+	    );
+	return s
+
+routine square4(n)
+     req 0 < n & [27*n+5000]tb
+     ens result = n*n
+     do  			/ ### FAILS, The contract underestimates the time bound ### /
+	 s := 0;
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & s=n*i & [28*(n-i)+9]tb
+	    do (	
+		s := s + n;	
+		i := i + 1	
+	    );
+	return s
+
+routine loopSum(n)
+     req 0 < n & [28*n+34]tb
+     ens 2*result = n*(n+1)
+     do  			/ ### OK ### /
+	 s := 0;
+	 i := 0;			
+         while i < n 		
+	    inv i < n + 1 ^ ! i < 0 ^ 2 * s = i * (i+1) & [28*(n-i)+9]tb 
+	    do (	
+		i := i + 1;
+		s := s + i
+
+	    );
+	return s
+
+routine loopOddSum(n)
+     req 0 < n & [14*n+34]tb
+     ens ! 4*result < (n+1)*(n+1) & ! (n+2)*(n+2) < 4*result
+     do  			/ ### OK ### /
+	 s := 1;
+	 i := 1;			
+         while i < n 		
+	    inv i < n + 2 & ! i < 0 & [14*(n-i)+14+9]tb & 4 * s = (i+1) * (i+1)
+	    do (	
+		i := i + 2;
+		s := s + i	
+	    );
+	return s
+
+routine recSum1(n)
+     req 0 < n & [39*n - 17]tb
+     ens 2*result = n*(n+1)
+     do				/ ### FAILS, In real execution the contract is true, however, the algorithm wrongly fails the verification of this routine, The algorithm is still sound ###  /
+       if n = 1 then  		
+         return 1
+       else (
+	 s := recSum1 (n-1);
+	 return n+s	
+       )
+
+routine recSum2(n)
+     req 0 < n & [41*n - 17]tb
+     ens 2*result = n*(n+1)
+     do				/ ### OK ###  /
+       if n = 1 then  		
+         return 1
+       else (
+	 s := recSum2 (n-1);
+	 return n+s	
+       )
+
+routine recIsOdd(n)
+     req (0-1) < n & [19*n + 25]tb
+     ens result < 2 ^ (0-1) < result
+     do				/ ### OK ###  /
+	if n<2 then
+	  return n
+	else(
+	  r := recIsOdd(n-2);
+	  return r
+	)
+
+routine loopFib(n)
+     req 1 < n & [40*(n-2) +44]tb
+     ens 0=0
+     do				/ ### OK ###  /
+	f0 := 0;
+	f1 := 1;
+	f2 := 1;
+	i := 2;
+        while i < n 		
+	    inv i < n + 1 & ! i < 2 & [40*(n-i)+9]tb
+	    do (	
+		f0 := f1;
+		f1 := f2;
+		f2 := f0 + f1;	
+		i := i + 1	
+	    );
+	return f2
+ 
+routine main(n)
+     req [186]tb 
+     ens [0]tb
+     do				/ ### OK ### /
+        n:= loopFib(5)
+     

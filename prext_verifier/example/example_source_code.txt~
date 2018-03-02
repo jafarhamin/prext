@@ -1,0 +1,181 @@
+routine rand(n)
+     req [14]tb
+     ens result=100
+     do  			/ ### OK ### /
+	return 100 
+
+routine set(n)
+     req [15]tb
+     ens result = n
+     do  			/ ### OK ### /
+	return n 		
+
+routine rtn1(n)
+     req [37]tb 
+     ens 1=1
+     do  			/ ### OK ### /
+	i := rand(n)	
+
+routine rtn2(n)
+     req [45]tb 
+     ens 1=1
+     do  			/ ### OK ### /
+	i := rand(n);		
+	i := i+1 
+
+routine rtn3(n)
+     req [46]tb 
+     ens [1]tb
+     do  			/ ### OK, however routine leaks time ### /
+	i := rand(n);
+	i := i+1 
+		
+routine incorrectTimeBound(n)
+     req [44]tb & 0 < n
+     ens [0]tb
+     do  			/ ### Fails, it needs at least 45 time budget ### /
+	i := rand(n);
+	i := i+1 
+
+routine rtn4(n)
+     req 0 < n & [19*n+46]tb
+     ens 0 = 0
+     do  			/ ### OK ### /
+	 i:= set(0);	 		
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+9]tb
+	    do (		
+		i := i + 1 	
+	    )
+
+routine rtn5(n)
+     req 0 < n & [19*n+52]tb
+     ens 0 = 0
+     do  			/ ### OK ### /
+	 i:= set(0);	 / 25 /		
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+9]tb
+	    do (		
+		i := i + 1 	
+	    );
+	n := i
+
+routine rtn6(n)
+     req 0 < n & [19*n+52]tb
+     ens 0 = 0
+     do  			/ ### OK, however invariant overestimates ### /
+	 i:= set(0);	 / 25 /		
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+20]tb
+	    do (		
+		i := i + 1 	
+	    );
+	n := i
+
+routine incorrectInvariantTimeBound(n)
+     req 0 < n & [19*n+52]tb
+     ens 0 = 0
+     do  			/ ### Fails, no enough budget for the second demonic choice ### /
+	 i:= set(0);	 	
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+21]tb
+	    do (		
+		i := i + 1 	
+	    );
+	n := i
+
+
+routine incorrectInvariantTimeBound2(n)
+     req 0 < n & [19*n+46]tb
+     ens 0 = 0
+     do  			/ ### Failes, Invariant underestimate the time budget ### /
+	 i:= set(0);			
+         while i < n 		
+	    inv i < n + 1 & ! i < 0 & [19*(n-i)+8]tb
+	    do (		
+		i := i + 1 	
+	    )
+
+routine rtn7(n)
+     req 0 < n & [28]tb
+     ens 0 = 0
+     do  			/ ### OK ### /
+	 if 5<n then
+		return 1
+	 else
+	 	return (n + n)
+	 
+routine incorrectStrange(n)
+     req 0 < n & [28]tb
+     ens 0 = 0
+     do  			/ ### Although the contract is correct, it counts the statements followed by the return, So it fails ### /
+	 if 5<n then
+		return 1
+	 else
+	 (
+		return (n + n);
+		n := n+n
+	 )
+
+routine factorial(n)
+     req 0 < n & [41*n - 17]tb
+     ens 0 = 0
+     do				/ ### OK ###  /
+       if n = 1 then  		
+         return 1
+       else (
+	 f := factorial (n-1);
+	 return n+f	
+       )
+
+routine incorrectF1(n)
+     req [41*n - 17]tb
+     ens 0 = 0
+     do				/ ### Fails, n can be a negative number ### /
+       if n = 1 then  		
+         return 1
+       else (
+	 f := incorrectF1(n-1);
+	 return n+f	
+       )
+
+routine incorrectF2(n)
+     req 0 < n & [39*n - 17]tb
+     ens 0 = 0
+     do				/ ### Fails, It should be correct but it counts statements followed by return ### /
+       if n = 1 then  		
+         return 1
+       else (
+	 f := incorrectF2(n-1);
+	 return n+f	
+       )
+
+routine incorrectF3(n)
+     req 0 < n & [41 * n - 18]tb
+     ens 0 = 0
+     do				/ ### Fails, the contract underestimates the time budget  ### /
+       if n = 1 then  		
+         return 1
+       else (
+	 f := incorrectF3(n-1);
+	 return n+f	
+       )
+
+routine incorrectF4(n)
+     req 0 < n & [400 * n]tb
+     ens 0 = 0
+     do				/ ### Fails, the precondition of the callee is not safisfied (n can be negative) ### /
+	 f := incorrectF4(n-1)
+
+routine incorrectF4(n)
+     req 0 < n & [400 * n]tb
+     ens 0 = 0
+     do				/ ### Fails, you cannot find a correct contract ### /
+	 f := incorrectF4(n)
+	 
+routine main(n)
+     req [163]tb 
+     ens [0]tb
+     do				/ ### OK ### /
+        n:= rtn4(5)
+     
